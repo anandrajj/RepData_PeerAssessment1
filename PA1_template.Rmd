@@ -1,20 +1,88 @@
-# Reproducible Research: Peer Assessment 1
+# Reproducible Research: Peer Assessment 1 Submitted by Anandraj
 
 
 ## Loading and preprocessing the data
-
-
+Load the data from file using read.csv()
+```{r}
+    df      <- read.csv("activity.csv")
+```
 
 ## What is mean total number of steps taken per day?
-
-
+Make a histogram of the total number of steps taken each day 
+```{r}
+stepsum <- aggregate(df$steps,list(df$date),sum) 
+hist(stepsum$x,xlab = "Total Number of Step Taken per Day",main="Total Number of Steps per Day")
+```
+    
+Mean and Median total number of steps taken per day 
+Mean Steps taken 
+```{r}
+aggregate(x=df$steps,list(df$date),function(x) mean(x,na.rm=T)) 
+```
+Median of Steps taken
+```{r}
+aggregate(x=df$steps,list(df$date),function(x) median(x,na.rm=T))
+```
 
 ## What is the average daily activity pattern?
+Time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
 
-
+```{r}
+meanbyinterval <- aggregate(x=df$steps,list(df$interval),function(x) mean(x,na.rm=T)) 
+plot(meanbyinterval$x ~ meanbyinterval$Group.1,type="l",xlab="Five minutes Interval",ylab="Average Number of Steps", main ="5-Min interval vs Average Steps")
+```
+    
+    
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps? 
+```{r}
+meanbyinterval[meanbyinterval$x==max(meanbyinterval$x),]$Group.1
+```
 
 ## Imputing missing values
 
-
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+    
+To create the new dataset by imputing missing values copy original dataset df to dfout.
+```{r}
+dfout <- df 
+```
+To impute the values use a for loop to select the rows with missing values then assign the intervalmean to that value. 
+```{r}
+for (i in which(is.na(dfout$steps)))
+{ 
+dfout$steps[i] <- meanbyinterval[meanbyinterval$Group.1 == dfout[i,3],2] 
+}
+```
+Histogram of the total number of steps taken each day after imputing values
+```{r}
+stepsum <- aggregate(dfout$steps,list(dfout$date),sum) 
+hist(stepsum$x,xlab = "Total Number of Step Taken per Day",main="Total Number of Steps per Day")
+```
+Calculate and report the mean and median total number of steps taken per day 
+Mean of Steps for each day
+```{r}
+aggregate(x=dfout$steps,list(dfout$date),function(x) mean(x,na.rm=T)) 
+```
+Median of Steps for each day
+```{r}
+aggregate(x=dfout$steps,list(dfout$date),function(x) median(x,na.rm=T))
+```
+     
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Create a new factor variable to indicate if Weekend or Weekday
+```{r}
+wd <- rep("day",length(dfout$date))
+wd[which(!(weekdays(as.Date(dfout$date,format="%Y-%m-%d")) %in% c("Saturday","Sunday")))] <- "Weekday"
+wd[which(weekdays(as.Date(dfout$date,format="%Y-%m-%d")) %in% c("Saturday","Sunday"))] <- "Weekend"
+wd <- as.factor(wd)
+```
+Average steps across 5-Min interval split by Weekday & Weekdends
+```{r}
+meanbyintday <- aggregate(x=dfout$steps,list(df$interval,wd),function(x) mean(x,na.rm=T))
+```
+Plot the difference in Pattern
+```{r}
+library("ggplot2")
+qplot(Group.1,x,data=meanbyintday,geom="line",facets=Group.2~.,color=Group.2,xlab="5-Min Interval",ylab="Average Steps",main="Weekend vs Weekdays")
+```
